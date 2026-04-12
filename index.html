@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>unichat</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- load stylesheet with cache-busting query (uses timestamp to avoid stale cache during development) -->
+<script>
+    (function(){
+        try{
+            var l = document.createElement('link');
+            l.rel = 'stylesheet';
+            l.href = 'styles.css?v=' + Date.now();
+            document.head.appendChild(l);
+        }catch(e){}
+    })();
+</script>
+    <link rel="icon" href="http://www.unichat.sbs/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="http://www.unichat.sbs/favicon.ico" type="image/x-icon">
+    <meta property="og:site_name" content="unichat">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="unichat - small chatting website">
+    <meta property="og:description" content="a place where you can chat with others all in the same room.">
+    <meta property="og:image" content="http://www.unichat.sbs/unichat.png">
+    <meta property="og:url" content="/">
+</head>
+<body>
+<div class="app">
+
+    <div class="main">
+        <div id="infoModal" class="modal" aria-hidden="false">
+            <div class="modalContent" role="dialog" aria-label="Information and warnings">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <h4>information and warnings</h4>
+                    <button id="infoClose" class="smallBtn" aria-label="close">✕</button>
+                </div>
+                <div id="infoContent" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:none;background:#141414;color:#fff;max-height:260px;overflow:auto;box-sizing:border-box;white-space:pre-wrap">
+<p>by signing up or using an existing account, you agree to the following information and rules. unichat is currently in testing and is intended only for testing and development purposes. it is not designed for mainstream or production use.
+
+
+security notice: while passwords are hashed, i cannot guarantee that any information submitted to this website is secure. we cannot guarantee that stored data cannot be accessed, decoded, or compromised in any way. do not send personal, private, or sensitive information anywhere on this site (yours or anyone else's). messages are stored in plain text. whispers/private messages are logged for moderation and security purposes.
+
+rules: no racial slurs. no racism or discrimination of any kind. no sexual content. no nsfw or pornographic material. no csam (child sexual abuse material) — zero tolerance. no transphobia, homophobia, or hate toward lgbtq+ individuals or groups. soft sexual content may be allowed only under direct supervision and approval of an administrator.
+
+if there are any problems, issues, or any concerns, please contact an administrator or me. for notifications on updates, changes, and announcements, please join the discord server here: https://discord.gg/n5NZGWaVBD
+</p>
+
+                </div>
+            </div>
+        </div>
+
+        <div id="setupScreen">
+            <div class="setupCard">
+                       <h3>unichat</h3>
+                       <div id="serverStatus" class="server-status offline"><span class="dot"></span><span class="label">server: loading...</span></div>
+                                             <input id="username" placeholder="username" />
+                       <input id="password" placeholder="password" type="password" />
+                       <input id="pfpUrl" placeholder="avatar (optional)" />
+                                            
+                       <div id="errorMsg" style="color:crimson"></div>
+                       <div style="text-align:right;margin-top:8px">
+                           <button id="loginBtn">login</button>
+                           <button id="registerBtn">register</button>
+                       </div>
+            </div>
+        </div>
+
+        <div id="chatWrap">
+            <div id="chat"></div>
+            <div id="typingIndicator"></div>
+            <div id="bottomArea">
+                <div class="inputRow">
+                        <input id="inputBox" type="text" placeholder="say something..">
+                        <button id="emojiBtn" class="emojiBtn" type="button" aria-label="emoji picker">😀</button>
+                        <div id="charCount">0 / 500</div>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <div id="onlinePanel" class="sidebar" aria-hidden="true">
+            <div class="panelHeader">
+                <div class="title">online users</div>
+            </div>
+            <div id="onlineList" class="onlineList"></div>
+        </div>
+            <div id="settingsModal" class="modal" aria-hidden="true">
+                    <div class="modalContent">
+                        <h4>settings</h4>
+                        <div class="settingsTabs">
+                            <button id="tabAccount" class="tabBtn" data-tab="account">account</button>
+                            <button id="tabAppearance" class="tabBtn" data-tab="appearance">appearance</button>
+                            <button id="tabAdmin" class="tabBtn" data-tab="admin" style="display:none;">admin</button>
+                        </div>
+                        <div class="tabPane" id="tab_account">
+
+                            <label>new username</label>
+                            <input id="set_newUsername" placeholder="new username">
+
+                            <label>avatar URL</label>
+                            <input id="set_avatar" placeholder="avatar url">
+                            <label>current password (required)</label>
+                            <input id="set_currentPassword" type="password" placeholder="current password">
+                            <label>new password (optional)</label>
+                            <input id="set_newPassword" type="password" placeholder="new password">
+                            <label>confirm new password</label>
+                            <input id="set_newPassword2" type="password" placeholder="confirm new password">
+                        </div>
+                        <div class="tabPane" id="tab_appearance" aria-hidden="true" style="display:none;">
+                            <label>theme</label>
+                            <select id="set_theme" style="width:100%;margin-top:6px;padding:8px;border-radius:6px;border:none;background:#141414;color:#fff">
+                                <option value="default">default</option>
+                                <option value="super_dark">super dark</option>
+                                <option value="custom">custom</option>
+                            </select>
+                            <div id="customThemeFields" style="display:none;margin-top:8px">
+                                <label>custom font URL (optional)</label>
+                                <input id="set_fontUrl" placeholder="https://example.com/font.ttf">
+                                <label>custom font family name (required if font URL provided)</label>
+                                <input id="set_fontName" placeholder="MyFont">
+                                <label>text color</label>
+                                <input id="set_textColor" type="color" value="#ffffff">
+                                <label>background color</label>
+                                <input id="set_bgColor" type="color" value="#121212">
+                                <label>panel color</label>
+                                <input id="set_panelColor" type="color" value="#111111">
+                                <label>accent color</label>
+                                <input id="set_accentColor" type="color" value="#6c63ff">
+                                <label>bubble color</label>
+                                <input id="set_bubbleColor" type="color" value="#242424">
+                                <label>input color</label>
+                                <input id="set_inputColor" type="color" value="#161616">
+                            </div>
+                            <div style="height:8px"></div>
+                            <label>reduce motion</label>
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                                <input id="set_reduceMotion" type="checkbox">
+                                <div style="font-size:13px;color:var(--muted)">reduce motion (remove animation)</div>
+                            </div>
+                            <div style="height:6px"></div>
+                            <label>compact mode</label>
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                                <input id="set_compactMode" type="checkbox">
+                                <div style="font-size:13px;color:var(--muted)">compact layout (reduced spacing)</div>
+                            </div>
+                            <div style="height:8px"></div>
+                            <label>date format</label>
+                            <select id="set_dateOrder" style="width:100%;margin-top:6px;padding:8px;border-radius:6px;border:none;background:#141414;color:#fff">
+                                <option value="mdy">mdy</option>
+                                <option value="dmy">dmy</option>
+                                <option value="ymd">ymd</option>
+                                <option value="ydm">ydm</option>
+                            </select>
+                            <div style="height:6px"></div>
+                            <label>time format</label>
+                            <select id="set_hourFormat" style="width:100%;margin-top:6px;padding:8px;border-radius:6px;border:none;background:#141414;color:#fff">
+                                <option value="12">12-hour (am/pm)</option>
+                                <option value="24">24-hour</option>
+                            </select>
+                        </div>
+                        <div class="tabPane" id="tab_admin" aria-hidden="true" style="display:none;">
+                            <h5>admin tools</h5>
+                            <div id="adminControls" style="margin-top:8px">
+                                <div style="display:flex;gap:8px;align-items:center">
+                                    <button id="adminRefreshBanned" class="smallBtn">refresh banned list</button>
+                                    <button id="adminRefreshPending" class="smallBtn">refresh pending</button>
+                                </div>
+                                <div style="display:flex;gap:12px;margin-top:8px">
+                                    <div style="flex:1">
+                                        <div style="font-weight:600;margin-bottom:6px">banned users</div>
+                                        <div id="adminBannedList" style="margin-top:4px"></div>
+                                    </div>
+                                    <div style="flex:1">
+                                        <div style="font-weight:600;margin-bottom:6px">pending approval</div>
+                                        <div id="adminPendingList" style="margin-top:4px"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="settingsError" style="color:crimson;margin-top:6px"></div>
+                        <div class="modalFooter" style="text-align:right;margin-top:8px">
+                            <button id="settingsCancel" class="smallBtn">cancel</button>
+                            <button id="settingsSave" class="smallBtn primary">save</button>
+                        </div>
+                    </div>
+            </div>
+</div>
+<!-- load app script with cache-busting query (uses timestamp) -->
+        <!-- Twemoji for consistent emoji rendering -->
+        <script>
+            (function(){
+                var btn = document.getElementById('infoClose');
+                if(btn){
+                    btn.addEventListener('click', function(){
+                        document.getElementById('infoModal').setAttribute('aria-hidden','true');
+                    });
+                }
+                document.addEventListener('keydown', function(e){
+                    if(e.key === 'Escape'){
+                        var m = document.getElementById('infoModal');
+                        if(m && m.getAttribute('aria-hidden') !== 'true') m.setAttribute('aria-hidden','true');
+                    }
+                });
+            })();
+        </script>
+                <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
+        <script>
+            (function(){
+                try{
+                    var s = document.createElement('script');
+                    s.src = 'app.js?v=' + Date.now();
+                    document.body.appendChild(s);
+                }catch(e){}
+            })();
+        </script>
+</body>
+</html>
