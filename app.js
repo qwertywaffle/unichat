@@ -740,11 +740,11 @@ function deleteMessage(id){
     messages = messages.filter(m=>m.id!==id);
     const el = document.querySelector(`[data-id="${id}"]`);
     if(el) el.remove();
-
-    ws.send(JSON.stringify({
-        type:"delete",
-        id:id
-    }));
+    try{
+        if(ws && ws.readyState === WebSocket.OPEN){
+            ws.send(JSON.stringify({ type: "delete", id: id }));
+        }
+    }catch(e){}
 }
 
 let typingTimeout;
@@ -1005,9 +1005,7 @@ inputBox.addEventListener('keydown',e=>{
                 };
 
                 addMessage(msg);
-                if(ws && ws.readyState===WebSocket.OPEN){
-                    ws.send(JSON.stringify(msg));
-                }
+                try{ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(msg)); }catch(e){}
             }
         }
         inputBox.value='';
@@ -1020,16 +1018,60 @@ inputBox.addEventListener('keydown',e=>{
 
 function ensureWS(onOpenSend){
     if(ws && ws.readyState===WebSocket.OPEN){
-        if(onOpenSend) ws.send(JSON.stringify(onOpenSend));
+        if(onOpenSend) try{ ws.send(JSON.stringify(onOpenSend)); }catch(e){}
         return;
     }
-    ws = new WebSocket(SERVER_WS_URL);
 
-    ws.onopen = ()=>{
-        if(onOpenSend) ws.send(JSON.stringify(onOpenSend));
+    // Helper to build an alternate URL to try if primary fails.
+    const makeAltUrl = (url)=>{
+        try{
+            const u = new URL(url);
+            // If connecting to a hostname with default port, try the typical server port 8765 on same host.
+            const host = window.location.hostname || u.hostname;
+            const useTls = (u.protocol === 'wss:');
+            const altProto = useTls ? 'wss:' : 'ws:';
+            return altProto + '//' + host + ':8765' + (u.pathname || '/');
+        }catch(e){
+            return url;
+        }
     };
 
-    ws.onmessage = (event)=>{ commonOnMessage(event); };
+    // Attempt to connect, and on failure try one fallback (same host:8765)
+    const tryConnect = (url, onOpenSend, triedFallback)=>{
+        try{
+            ws = new WebSocket(url);
+        }catch(e){
+            if(!triedFallback){
+                const alt = makeAltUrl(url);
+                tryConnect(alt, onOpenSend, true);
+            }
+            return;
+        }
+
+        ws.onopen = ()=>{
+            try{ setServerStatus(true); }catch(e){}
+            if(onOpenSend) try{ ws.send(JSON.stringify(onOpenSend)); }catch(e){}
+        };
+
+        ws.onmessage = (event)=>{ commonOnMessage(event); };
+
+        ws.onerror = (ev)=>{
+            try{ console.warn('WebSocket error connecting to', url); }catch(e){}
+        };
+
+        ws.onclose = (ev)=>{
+            try{ setServerStatus(false); }catch(e){}
+            // if connection closed before opening, try fallback once
+            if(!triedFallback){
+                const alt = makeAltUrl(url);
+                if(alt !== url){
+                    tryConnect(alt, onOpenSend, true);
+                }
+            }
+        };
+    };
+
+    tryConnect(SERVER_WS_URL, onOpenSend, false);
 }
 
 function setServerStatus(isOnline){
@@ -1050,19 +1092,33 @@ function setServerStatus(isOnline){
 function probeServer(){
     const url = SERVER_WS_URL;
     let probe = null;
-    try{
-        probe = new WebSocket(url);
-    }catch(e){
-        setServerStatus(false);
-        return;
-    }
     let settled = false;
-    const to = setTimeout(()=>{
-        if(!settled){ settled = true; try{ probe.close(); }catch(_e){} setServerStatus(false); }
-    }, 3000);
-    probe.onopen = ()=>{ if(!settled){ settled = true; clearTimeout(to); setServerStatus(true); try{ probe.close(); }catch(_e){} } };
-    probe.onerror = ()=>{ if(!settled){ settled = true; clearTimeout(to); setServerStatus(false); try{ probe.close(); }catch(_e){} } };
-    probe.onclose = ()=>{ };
+    const makeAltUrl = (u)=>{
+        try{
+            const uu = new URL(u);
+            const host = window.location.hostname || uu.hostname;
+            const useTls = (uu.protocol === 'wss:');
+            const proto = useTls ? 'wss:' : 'ws:';
+            return proto + '//' + host + ':8765' + (uu.pathname || '/');
+        }catch(e){ return u; }
+    };
+
+    const startProbe = (u, triedFallback)=>{
+        try{
+            probe = new WebSocket(u);
+        }catch(e){
+            if(!triedFallback){ startProbe(makeAltUrl(u), true); } else { setServerStatus(false); }
+            return;
+        }
+        const to = setTimeout(()=>{
+            if(!settled){ settled = true; try{ probe.close(); }catch(_e){} setServerStatus(false); }
+        }, 3000);
+        probe.onopen = ()=>{ if(!settled){ settled = true; clearTimeout(to); setServerStatus(true); try{ probe.close(); }catch(_e){} } };
+        probe.onerror = ()=>{ if(!settled){ settled = true; clearTimeout(to); setServerStatus(false); try{ probe.close(); }catch(_e){} if(!triedFallback){ startProbe(makeAltUrl(u), true); } } };
+        probe.onclose = ()=>{};
+    };
+
+    startProbe(url, false);
 }
 
 try{ probeServer(); setInterval(probeServer, 10000); }catch(e){}
