@@ -59,7 +59,7 @@ window.addEventListener('load', ()=>{
 });
 
 let ws;
-const SERVER_WS_URL = "wss://server.unichat.sbs";
+const SERVER_WS_URL = "wss://wosbvkejhu.a.pinggy.link";
 // currently-editing message id
 let editingId = null;
 
