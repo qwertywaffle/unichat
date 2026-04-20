@@ -59,7 +59,7 @@ window.addEventListener('load', ()=>{
 });
 
 let ws;
-const SERVER_WS_URL = "wss://yulmpuhdkj.a.pinggy.link:24232";
+const SERVER_WS_URL = "wss://yulmpuhdkj.a.pinggy.link";
 // currently-editing message id
 let editingId = null;
 
