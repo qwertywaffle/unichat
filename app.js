@@ -59,7 +59,7 @@ window.addEventListener('load', ()=>{
 });
 
 let ws;
-const SERVER_WS_URL = "ws://cyezf-2607-fb92-2a86-99-e82e-5ef0-6f0b-7d7a.run.pinggy-free.link";
+const SERVER_WS_URL = "wss://cyezf-2607-fb92-2a86-99-e82e-5ef0-6f0b-7d7a.run.pinggy-free.link";
 // currently-editing message id
 let editingId = null;
 
